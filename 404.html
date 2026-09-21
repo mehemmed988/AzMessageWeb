@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <title>Yönlendiriliyor...</title>
+    <script>
+        var pathSegmentsToKeep = 1;
+        var l = window.location;
+        var path = l.pathname.split('/').slice(pathSegmentsToKeep + 1).join('/');
+        var search = l.search;
+        var hash = l.hash;
+        var targetUrl = l.protocol + '//' + l.host + '/' + l.pathname.split('/')[1] + '/?redirect=' + encodeURIComponent(path + search + hash);
+        window.location.replace(targetUrl);
+    </script>
+</head>
+<body>
+    <p style="text-align:center; margin-top:50px; font-family:sans-serif;">Yönlendiriliyorsunuz...</p>
+</body>
+</html>" + packageName + ";end;";
+        
+        var fallbackTimer = setTimeout(function() {
+            window.location.href = githubDownloadUrl;
+        }, 1500);
+
+        window.location.href = intentUrl;
+
+        window.addEventListener("blur", function() {
+            clearTimeout(fallbackTimer);
+        });
+    </script>
+</body>
+</html>
