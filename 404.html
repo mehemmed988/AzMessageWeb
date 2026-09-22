@@ -16,17 +16,4 @@
 <body>
     <p style="text-align:center; margin-top:50px; font-family:sans-serif;">Yönlendiriliyorsunuz...</p>
 </body>
-</html>" + packageName + ";end;";
-        
-        var fallbackTimer = setTimeout(function() {
-            window.location.href = githubDownloadUrl;
-        }, 1500);
-
-        window.location.href = intentUrl;
-
-        window.addEventListener("blur", function() {
-            clearTimeout(fallbackTimer);
-        });
-    </script>
-</body>
 </html>
