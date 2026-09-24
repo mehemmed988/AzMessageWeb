@@ -5,11 +5,17 @@
     <title>AzMessage Yönlendirici</title>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <link rel="icon" type="image/png" href="favicon.png">
+
+    <meta property="og:type" content="website">
+    <meta property="og:title" id="ogTitle" content="AzMessage">
+    <meta property="og:description" id="ogDesc" content="AzMessage ile güvenli ve hızlı iletişim.">
+    <meta property="og:image" content="https://mehemmed988.github.io/AzMessage/favicon.png">
+
     <style>
         body {
             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
             text-align: center;
-            margin-top: 60px;
+            margin-top: 40px;
             background-color: #f4f4f9;
             color: #333;
             padding: 0 20px;
@@ -43,7 +49,7 @@
             display: none;
             width: 100%;
             box-sizing: border-box;
-            margin-top: 20px;
+            margin-top: 15px;
             padding: 14px;
             background-color: #25D366;
             color: white;
@@ -57,25 +63,42 @@
             text-align: center;
         }
         .btn:active { background-color: #1ebe5d; }
-        .btn-secondary { background-color: #0088cc; margin-top: 10px; }
+        .btn-secondary { background-color: #0088cc; }
+        .btn-apk { background-color: #43a047; }
         
         .error-box { color: #e53935; font-weight: bold; }
         .success-box { color: #2e7d32; font-weight: bold; }
+        .warning-box { color: #f57c00; font-weight: bold; }
+
+        #qrcode {
+            margin: 20px auto;
+            display: flex;
+            justify-content: center;
+        }
+        #qrcode img {
+            border: 4px solid #fff;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+            border-radius: 8px;
+        }
     </style>
 </head>
 <body>
     <div class="container">
-        <h2>AzMessage</h2>
+        <h2 id="appTitle">AzMessage</h2>
         <div id="loader" class="spinner"></div>
         <p id="infoText">Bağlantı hazırlanıyor...</p>
 
+        <div id="qrcode"></div>
+
         <a href="#" id="openAppBtn" class="btn">Uygulamayı Aç</a>
-        <a href="https://mehemmed988.github.io/AzMessage/" id="fallbackBtn" class="btn btn-secondary" style="display: none;">Ana Sayfaya Dön</a>
+        <a href="https://github.com/mehemmed988/AzMessage" id="downloadApkBtn" class="btn btn-apk">APK İndir (GitHub)</a>
+        <a href="https://mehemmed988.github.io/AzMessage/" id="fallbackBtn" class="btn btn-secondary">Ana Sayfaya Dön</a>
     </div>
 
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-database-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-auth-compat.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
 
     <script>
         function isAndroidDevice() {
@@ -89,15 +112,38 @@
             return false;
         }
 
+        function isInAppBrowser() {
+            var ua = navigator.userAgent || navigator.vendor || window.opera;
+            return /FBAN|FBAV|Instagram|Telegram|Twitter|Line|MicroMessenger/i.test(ua);
+        }
+
+        function generateIntentUrl(schemeUrl, fallbackUrl) {
+            var cleanScheme = schemeUrl.replace("azapp://", "");
+            return "intent://" + cleanScheme + "#Intent;scheme=azapp;package=com.azmessage.app;S.browser_fallback_url=" + encodeURIComponent(fallbackUrl) + ";end";
+        }
+
         var loader = document.getElementById("loader");
         var infoText = document.getElementById("infoText");
         var openAppBtn = document.getElementById("openAppBtn");
         var fallbackBtn = document.getElementById("fallbackBtn");
+        var downloadApkBtn = document.getElementById("downloadApkBtn");
+        var appTitle = document.getElementById("appTitle");
+
+        var githubReleaseUrl = "https://github.com/mehemmed988/AzMessage";
+        var baseSchemeUrl = "azapp://open";
 
         if (!isAndroidDevice()) {
             loader.style.display = "none";
-            infoText.className = "error-box";
-            infoText.innerText = "Bu hizmet yalnızca Android cihazlarda kullanılabilir.";
+            infoText.className = "warning-box";
+            infoText.innerText = "Bu hizmet Android cihazlar içindir. Android cihazınızla aşağıdaki QR kodu taratabilir veya APK dosyasını indirebilirsiniz:";
+            
+            new QRCode(document.getElementById("qrcode"), {
+                text: window.location.href,
+                width: 160,
+                height: 160
+            });
+
+            downloadApkBtn.style.display = "block";
             fallbackBtn.style.display = "block";
         } else {
             var firebaseConfig = {
@@ -115,8 +161,6 @@
             var db = firebase.database();
             var auth = firebase.auth();
 
-            var baseSchemeUrl = "azapp://open";
-            var githubReleaseUrl = "https://github.com/mehemmed988/AzMessage";
             var urlParams = new URLSearchParams(window.location.search);
             var redirectPath = urlParams.get('redirect');
             var targetUsername = null;
@@ -146,38 +190,21 @@
                 }
             }
 
-            function bindManualOpenHandler(schemeUrl) {
+            function triggerOpen(schemeUrl) {
+                var finalUrl = generateIntentUrl(schemeUrl, githubReleaseUrl);
+
+                if (isInAppBrowser()) {
+                    infoText.className = "warning-box";
+                    infoText.innerText = "Uygulama içi tarayıcı kullanıyorsunuz. Yönlendirmenin çalışması için lütfen sağ üstteki menüden 'Tarayıcıda Aç' (Chrome) seçeneğine tıklayın.";
+                }
+
+                openAppBtn.href = finalUrl;
+
                 openAppBtn.addEventListener("click", function(e) {
-                    e.preventDefault();
-                    
-                    var appOpened = false;
-                    var redirectTimer = null;
-
-                    function handleVisibilityChange() {
-                        if (document.hidden) {
-                            appOpened = true;
-                            if (redirectTimer) {
-                                clearTimeout(redirectTimer);
-                            }
-                            document.removeEventListener("visibilitychange", handleVisibilityChange);
-                        }
-                    }
-
-                    document.addEventListener("visibilitychange", handleVisibilityChange);
-
-                    window.location.href = schemeUrl;
-
-                    redirectTimer = setTimeout(function() {
-                        document.removeEventListener("visibilitychange", handleVisibilityChange);
-                        
-                        if (!appOpened && !document.hidden) {
-                            infoText.innerText = "Uygulama cihazınızda bulunamadı. İndirme sayfasına yönlendiriliyorsunuz...";
-                            setTimeout(function() {
-                                window.location.href = githubReleaseUrl;
-                            }, 1000);
-                        }
-                    }, 2500);
+                    window.location.href = finalUrl;
                 });
+
+                window.location.href = finalUrl;
             }
 
             if (isInvalid) {
@@ -190,16 +217,19 @@
                 loader.style.display = "none";
                 infoText.innerText = "AzMessage ana sayfasına yönlendiriliyorsunuz...";
                 
-                openAppBtn.href = baseSchemeUrl;
+                document.getElementById("ogTitle").content = "AzMessage Ana Sayfa";
+                
                 openAppBtn.innerText = "Uygulamayı Aç";
                 openAppBtn.style.display = "block";
 
-                bindManualOpenHandler(baseSchemeUrl);
-
-                window.location.href = baseSchemeUrl;
+                triggerOpen(baseSchemeUrl);
             } 
             else {
                 infoText.innerText = "Güvenli oturum açılıyor...";
+
+                document.title = "AzMessage - @" + targetUsername;
+                document.getElementById("ogTitle").content = "AzMessage - @" + targetUsername;
+                document.getElementById("ogDesc").content = "@" + targetUsername + " kullanıcısının profilini AzMessage üzerinde görüntüleyin.";
 
                 auth.signInAnonymously()
                     .then(function() {
@@ -226,13 +256,10 @@
                             infoText.className = "success-box";
                             infoText.innerText = "@" + targetUsername + " kullanıcısı bulundu. Uygulama açılıyor...";
                             
-                            openAppBtn.href = targetSchemeUrl;
                             openAppBtn.innerText = "@" + targetUsername + " Profilini Aç";
                             openAppBtn.style.display = "block";
 
-                            bindManualOpenHandler(targetSchemeUrl);
-
-                            window.location.href = targetSchemeUrl;
+                            triggerOpen(targetSchemeUrl);
 
                         } else {
                             loader.style.display = "none";
