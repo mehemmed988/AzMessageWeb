@@ -87,22 +87,24 @@
         
         .error-box { color: #e53935; font-weight: bold; }
         .success-box { color: #2e7d32; font-weight: bold; }
+        .warning-box { color: #f57c00; font-weight: bold; }
     </style>
 </head>
 <body>
     <div class="container">
         <h2>AzMessage</h2>
 
-        <div class="search-box">
+        <!-- Arama Alanı (Varsayılan olarak gizli, JS Android Telefon/Tablet doğrularsa gösterilir) -->
+        <div id="searchContainer" class="search-box" style="display: none;">
             <input type="text" id="usernameInput" class="search-input" placeholder="Kullanıcı adı girin..." />
             <button id="searchBtn" class="search-btn">Ara</button>
         </div>
         
         <div id="loader" class="spinner" style="display: none;"></div>
-        <p id="infoText">Kullanıcı arayabilir veya doğrudan uygulamayı açabilirsiniz.</p>
+        <p id="infoText">Cihaz kontrol ediliyor...</p>
 
         <a href="#" id="openAppBtn" class="btn">Uygulamayı Aç</a>
-        <a href="https://mehemmed988.github.io/AzMessageWeb/" id="fallbackBtn" class="btn btn-secondary" style="display: none;">Ana Sayfaya Dön</a>
+        <a href="https://mehemmed988.github.io/AzMessageWeb/" id="fallbackBtn" class="btn btn-secondary">Web Sitesine Git</a>
     </div>
 
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
@@ -110,169 +112,210 @@
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-auth-compat.js"></script>
 
     <script>
-        var firebaseConfig = {
-            apiKey: "AIzaSyCyloxmk4_L4_WKeXi6w8gimoFGNfdPz3o",
-            authDomain: "azmessage-1998.firebaseapp.com",
-            databaseURL: "https://azmessage-1998-default-rtdb.firebaseio.com",
-            projectId: "azmessage-1998",
-            storageBucket: "azmessage-1998.firebasestorage.app",
-            messagingSenderId: "989356500260",
-            appId: "1:989356500260:web:23c01bdabaff85555bbfb1",
-            measurementId: "G-8CBX47S3BR"
-        };
+        // Sadece Android Telefon ve Tablet Doğrulaması (TV ve Diğer Platformlar Engellenir)
+        function isAndroidMobileOrTablet() {
+            var ua = (navigator.userAgent || navigator.vendor || window.opera).toLowerCase();
 
-        firebase.initializeApp(firebaseConfig);
-        var db = firebase.database();
-        var auth = firebase.auth();
+            // 1. İçinde "android" geçmiyorsa direkt engelle (iOS, Windows, Mac vb.)
+            if (!ua.includes("android")) {
+                return false;
+            }
 
-        var baseSchemeUrl = "azapp://open";
-        // Fallback ve Ana Sayfa adresi olarak AzMessageWeb tanımlandı
+            // 2. Android olup TV / Akıllı Ekran olan cihazları engelle
+            var isTv = ua.includes("tv") || 
+                       ua.includes("googletv") || 
+                       ua.includes("smarttv") || 
+                       ua.includes("androidtv") || 
+                       ua.includes("hbbtv") || 
+                       ua.includes("crkey") || // Chromecast
+                       ua.includes("aftt") ||  // Fire TV Stick
+                       ua.includes("aftm");    // Fire TV Stick
+
+            if (isTv) {
+                return false;
+            }
+
+            // 3. Navigator UserAgentData Platform Kontrolü
+            if (navigator.userAgentData && navigator.userAgentData.platform) {
+                if (navigator.userAgentData.platform.toLowerCase() !== 'android') {
+                    return false;
+                }
+            }
+
+            return true;
+        }
+
         var mainWebSiteUrl = "https://mehemmed988.github.io/AzMessageWeb/"; 
-        
+        var baseSchemeUrl = "azapp://open";
+
         var infoText = document.getElementById("infoText");
         var openAppBtn = document.getElementById("openAppBtn");
         var fallbackBtn = document.getElementById("fallbackBtn");
         var loader = document.getElementById("loader");
+        var searchContainer = document.getElementById("searchContainer");
         var usernameInput = document.getElementById("usernameInput");
         var searchBtn = document.getElementById("searchBtn");
 
-        // Çalışan Orijinal Manuel Yönlendirme Fonksiyonu
-        function bindManualOpenHandler(schemeUrl) {
-            openAppBtn.onclick = function(e) {
-                e.preventDefault();
-                
-                var appOpened = false;
-                var redirectTimer = null;
+        // 1. ADIM: Cihaz Filtreleme Kontrolü
+        if (!isAndroidMobileOrTablet()) {
+            infoText.className = "warning-box";
+            infoText.innerText = "Bu uygulama ve derin bağlantı yönlendirmesi yalnızca Android telefon ve tabletlerde çalışmaktadır.";
+            fallbackBtn.style.display = "block";
+        } else {
+            searchContainer.style.display = "flex";
+            infoText.innerText = "Kullanıcı arayabilir veya doğrudan uygulamayı açabilirsiniz.";
 
-                function handleVisibilityChange() {
-                    if (document.hidden) {
-                        appOpened = true;
-                        if (redirectTimer) clearTimeout(redirectTimer);
-                        document.removeEventListener("visibilitychange", handleVisibilityChange);
+            var firebaseConfig = {
+                apiKey: "AIzaSyCyloxmk4_L4_WKeXi6w8gimoFGNfdPz3o",
+                authDomain: "azmessage-1998.firebaseapp.com",
+                databaseURL: "https://azmessage-1998-default-rtdb.firebaseio.com",
+                projectId: "azmessage-1998",
+                storageBucket: "azmessage-1998.firebasestorage.app",
+                messagingSenderId: "989356500260",
+                appId: "1:989356500260:web:23c01bdabaff85555bbfb1",
+                measurementId: "G-8CBX47S3BR"
+            };
+
+            firebase.initializeApp(firebaseConfig);
+            var db = firebase.database();
+            var auth = firebase.auth();
+
+            function bindManualOpenHandler(schemeUrl) {
+                openAppBtn.onclick = function(e) {
+                    e.preventDefault();
+                    
+                    var appOpened = false;
+                    var redirectTimer = null;
+
+                    function handleVisibilityChange() {
+                        if (document.hidden) {
+                            appOpened = true;
+                            if (redirectTimer) clearTimeout(redirectTimer);
+                            document.removeEventListener("visibilitychange", handleVisibilityChange);
+                        }
                     }
+
+                    document.addEventListener("visibilitychange", handleVisibilityChange);
+                    window.location.href = schemeUrl;
+
+                    redirectTimer = setTimeout(function() {
+                        document.removeEventListener("visibilitychange", handleVisibilityChange);
+                        if (!appOpened && !document.hidden) {
+                            infoText.className = "warning-box";
+                            infoText.innerText = "Uygulama cihazınızda bulunamadı. Web sitesine yönlendiriliyorsunuz...";
+                            setTimeout(function() {
+                                window.location.href = mainWebSiteUrl;
+                            }, 1000);
+                        }
+                    }, 2500);
+                };
+            }
+
+            function processUserSearch(targetUsername, autoTrigger) {
+                if (!targetUsername || targetUsername.trim() === "") {
+                    infoText.className = "error-box";
+                    infoText.innerText = "Lütfen bir kullanıcı adı girin!";
+                    return;
                 }
 
-                document.addEventListener("visibilitychange", handleVisibilityChange);
+                targetUsername = targetUsername.trim().replace("@", "");
+                
+                loader.style.display = "block";
+                openAppBtn.style.display = "none";
+                fallbackBtn.style.display = "none";
+                infoText.className = "";
+                infoText.innerText = "@" + targetUsername + " kontrol ediliyor...";
 
-                // Doğrudan azapp:// scheme tetiklemesi
-                window.location.href = schemeUrl;
+                auth.signInAnonymously()
+                    .then(function() {
+                        return db.ref('users').orderByChild('username').equalTo(targetUsername).once('value');
+                    })
+                    .then(function(snapshot) {
+                        loader.style.display = "none";
+                        var found = false;
 
-                redirectTimer = setTimeout(function() {
-                    document.removeEventListener("visibilitychange", handleVisibilityChange);
-                    if (!appOpened && !document.hidden) {
-                        infoText.innerText = "Uygulama cihazınızda bulunamadı. Web sitesine yönlendiriliyorsunuz...";
-                        setTimeout(function() {
-                            window.location.href = mainWebSiteUrl;
-                        }, 1000);
-                    }
-                }, 2500);
-            };
-        }
-
-        function processUserSearch(targetUsername, autoTrigger) {
-            if (!targetUsername || targetUsername.trim() === "") {
-                infoText.className = "error-box";
-                infoText.innerText = "Lütfen bir kullanıcı adı girin!";
-                return;
-            }
-
-            targetUsername = targetUsername.trim().replace("@", "");
-            
-            loader.style.display = "block";
-            openAppBtn.style.display = "none";
-            fallbackBtn.style.display = "none";
-            infoText.className = "";
-            infoText.innerText = "@" + targetUsername + " kontrol ediliyor...";
-
-            auth.signInAnonymously()
-                .then(function() {
-                    return db.ref('users').orderByChild('username').equalTo(targetUsername).once('value');
-                })
-                .then(function(snapshot) {
-                    loader.style.display = "none";
-                    var found = false;
-
-                    if (snapshot.exists()) {
-                        snapshot.forEach(function(child) {
-                            if (child.val() && child.val().username === targetUsername) {
-                                found = true;
-                            }
-                        });
-                    }
-
-                    if (found) {
-                        var targetSchemeUrl = baseSchemeUrl + "?user=" + encodeURIComponent(targetUsername);
-                        
-                        infoText.className = "success-box";
-                        infoText.innerText = "@" + targetUsername + " kullanıcısı bulundu. Uygulama açılıyor...";
-                        
-                        openAppBtn.innerText = "@" + targetUsername + " Profilini Aç";
-                        openAppBtn.style.display = "block";
-
-                        bindManualOpenHandler(targetSchemeUrl);
-
-                        if (autoTrigger) {
-                            window.location.href = targetSchemeUrl;
+                        if (snapshot.exists()) {
+                            snapshot.forEach(function(child) {
+                                if (child.val() && child.val().username === targetUsername) {
+                                    found = true;
+                                }
+                            });
                         }
-                    } else {
+
+                        if (found) {
+                            var targetSchemeUrl = baseSchemeUrl + "?user=" + encodeURIComponent(targetUsername);
+                            
+                            infoText.className = "success-box";
+                            infoText.innerText = "@" + targetUsername + " kullanıcısı bulundu. Uygulama açılıyor...";
+                            
+                            openAppBtn.innerText = "@" + targetUsername + " Profilini Aç";
+                            openAppBtn.style.display = "block";
+
+                            bindManualOpenHandler(targetSchemeUrl);
+
+                            if (autoTrigger) {
+                                window.location.href = targetSchemeUrl;
+                            }
+                        } else {
+                            loader.style.display = "none";
+                            infoText.className = "error-box";
+                            infoText.innerText = "@" + targetUsername + " adında bir kullanıcı bulunamadı!";
+                            fallbackBtn.style.display = "block";
+                        }
+                    })
+                    .catch(function(err) {
                         loader.style.display = "none";
                         infoText.className = "error-box";
-                        infoText.innerText = "@" + targetUsername + " adında bir kullanıcı bulunamadı!";
+                        infoText.innerText = "Bağlantı hatası oluştu.";
                         fallbackBtn.style.display = "block";
-                    }
-                })
-                .catch(function(err) {
-                    loader.style.display = "none";
-                    infoText.className = "error-box";
-                    infoText.innerText = "Bağlantı hatası oluştu.";
-                    fallbackBtn.style.display = "block";
-                });
-        }
-
-        searchBtn.addEventListener("click", function() {
-            processUserSearch(usernameInput.value, true);
-        });
-
-        usernameInput.addEventListener("keypress", function(e) {
-            if (e.key === "Enter") {
-                processUserSearch(usernameInput.value, true);
+                    });
             }
-        });
 
-        // URL Analizi
-        var urlParams = new URLSearchParams(window.location.search);
-        var redirectPath = urlParams.get('redirect');
-        var targetUsername = null;
-        var isInvalid = false;
+            searchBtn.addEventListener("click", function() {
+                processUserSearch(usernameInput.value, true);
+            });
 
-        if (urlParams.has('redirect')) {
-            if (redirectPath && redirectPath.trim() !== "") {
-                var decodedRedirect = decodeURIComponent(redirectPath);
-                var pathSegments = decodedRedirect.split("/");
+            usernameInput.addEventListener("keypress", function(e) {
+                if (e.key === "Enter") {
+                    processUserSearch(usernameInput.value, true);
+                }
+            });
+
+            // URL Analizi
+            var urlParams = new URLSearchParams(window.location.search);
+            var redirectPath = urlParams.get('redirect');
+            var targetUsername = null;
+            var isInvalid = false;
+
+            if (urlParams.has('redirect')) {
+                if (redirectPath && redirectPath.trim() !== "") {
+                    var decodedRedirect = decodeURIComponent(redirectPath);
+                    var pathSegments = decodedRedirect.split("/");
+                    var userIndex = pathSegments.indexOf("user");
+                    if (userIndex !== -1 && pathSegments[userIndex + 1]) {
+                        targetUsername = pathSegments[userIndex + 1];
+                    } else { isInvalid = true; }
+                } else { isInvalid = true; }
+            } else {
+                var pathSegments = window.location.pathname.split("/");
                 var userIndex = pathSegments.indexOf("user");
                 if (userIndex !== -1 && pathSegments[userIndex + 1]) {
                     targetUsername = pathSegments[userIndex + 1];
-                } else { isInvalid = true; }
-            } else { isInvalid = true; }
-        } else {
-            var pathSegments = window.location.pathname.split("/");
-            var userIndex = pathSegments.indexOf("user");
-            if (userIndex !== -1 && pathSegments[userIndex + 1]) {
-                targetUsername = pathSegments[userIndex + 1];
+                }
             }
-        }
 
-        if (isInvalid) {
-            infoText.className = "error-box";
-            infoText.innerText = "Geçersiz veya hatalı bağlantı adresi!";
-            fallbackBtn.style.display = "block";
-        } else if (targetUsername) {
-            usernameInput.value = targetUsername;
-            processUserSearch(targetUsername, true);
-        } else {
-            openAppBtn.innerText = "Uygulamayı Aç";
-            openAppBtn.style.display = "block";
-            bindManualOpenHandler(baseSchemeUrl);
+            if (isInvalid) {
+                infoText.className = "error-box";
+                infoText.innerText = "Geçersiz veya hatalı bağlantı adresi!";
+                fallbackBtn.style.display = "block";
+            } else if (targetUsername) {
+                usernameInput.value = targetUsername;
+                processUserSearch(targetUsername, true);
+            } else {
+                openAppBtn.innerText = "Uygulamayı Aç";
+                openAppBtn.style.display = "block";
+                bindManualOpenHandler(baseSchemeUrl);
+            }
         }
     </script>
 </body>
