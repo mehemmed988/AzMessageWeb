@@ -24,7 +24,6 @@
         h2 { margin-top: 0; color: #111; }
         p { color: #666; font-size: 15px; line-height: 1.5; }
         
-        /* Arama Kutusu Tasarımı */
         .search-box {
             display: flex;
             gap: 8px;
@@ -39,9 +38,7 @@
             outline: none;
             transition: border-color 0.2s;
         }
-        .search-input:focus {
-            border-color: #25D366;
-        }
+        .search-input:focus { border-color: #25D366; }
         .search-btn {
             padding: 12px 18px;
             background-color: #25D366;
@@ -96,7 +93,6 @@
     <div class="container">
         <h2>AzMessage</h2>
 
-        <!-- Arama Kutusu ve Butonu -->
         <div class="search-box">
             <input type="text" id="usernameInput" class="search-input" placeholder="Kullanıcı adı girin..." />
             <button id="searchBtn" class="search-btn">Ara</button>
@@ -106,7 +102,7 @@
         <p id="infoText">Kullanıcı arayabilir veya doğrudan uygulamayı açabilirsiniz.</p>
 
         <a href="#" id="openAppBtn" class="btn">Uygulamayı Aç</a>
-        <a href="https://mehemmed988.github.io/AzMessage/" id="fallbackBtn" class="btn btn-secondary" style="display: none;">Temizle / Ana Sayfa</a>
+        <a href="https://mehemmed988.github.io/AzMessageWeb/" id="fallbackBtn" class="btn btn-secondary" style="display: none;">Ana Sayfaya Dön</a>
     </div>
 
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
@@ -130,7 +126,8 @@
         var auth = firebase.auth();
 
         var baseSchemeUrl = "azapp://open";
-        var githubReleaseUrl = "https://github.com/mehemmed988/AzMessage";
+        // Fallback ve Ana Sayfa adresi olarak AzMessageWeb tanımlandı
+        var mainWebSiteUrl = "https://mehemmed988.github.io/AzMessageWeb/"; 
         
         var infoText = document.getElementById("infoText");
         var openAppBtn = document.getElementById("openAppBtn");
@@ -139,7 +136,7 @@
         var usernameInput = document.getElementById("usernameInput");
         var searchBtn = document.getElementById("searchBtn");
 
-        // Senin Çalışan Orijinal Manuel Yönlendirme Fonksiyonun
+        // Çalışan Orijinal Manuel Yönlendirme Fonksiyonu
         function bindManualOpenHandler(schemeUrl) {
             openAppBtn.onclick = function(e) {
                 e.preventDefault();
@@ -163,9 +160,9 @@
                 redirectTimer = setTimeout(function() {
                     document.removeEventListener("visibilitychange", handleVisibilityChange);
                     if (!appOpened && !document.hidden) {
-                        infoText.innerText = "Uygulama cihazınızda bulunamadı. İndirme sayfasına yönlendiriliyorsunuz...";
+                        infoText.innerText = "Uygulama cihazınızda bulunamadı. Web sitesine yönlendiriliyorsunuz...";
                         setTimeout(function() {
-                            window.location.href = githubReleaseUrl;
+                            window.location.href = mainWebSiteUrl;
                         }, 1000);
                     }
                 }, 2500);
@@ -218,6 +215,7 @@
                             window.location.href = targetSchemeUrl;
                         }
                     } else {
+                        loader.style.display = "none";
                         infoText.className = "error-box";
                         infoText.innerText = "@" + targetUsername + " adında bir kullanıcı bulunamadı!";
                         fallbackBtn.style.display = "block";
@@ -231,7 +229,6 @@
                 });
         }
 
-        // Arama Butonu ve Enter Tuşu Dinleyicileri
         searchBtn.addEventListener("click", function() {
             processUserSearch(usernameInput.value, true);
         });
@@ -242,7 +239,7 @@
             }
         });
 
-        // URL Analizi (Sayfa ilk açıldığında linkte user varsa)
+        // URL Analizi
         var urlParams = new URLSearchParams(window.location.search);
         var redirectPath = urlParams.get('redirect');
         var targetUsername = null;
@@ -273,7 +270,6 @@
             usernameInput.value = targetUsername;
             processUserSearch(targetUsername, true);
         } else {
-            // Sadece ana sayfaya girildiyse
             openAppBtn.innerText = "Uygulamayı Aç";
             openAppBtn.style.display = "block";
             bindManualOpenHandler(baseSchemeUrl);
