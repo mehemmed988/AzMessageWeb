@@ -2,20 +2,13 @@
 <html lang="tr">
 <head>
     <meta charset="UTF-8">
-    <title>AzMessage - Kullanıcı Ara ve Yönlendir</title>
+    <title>AzMessage Yönlendirici</title>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <link rel="icon" type="image/png" href="favicon.png">
-
-    <meta property="og:type" content="website">
-    <meta property="og:title" id="ogTitle" content="AzMessage">
-    <meta property="og:description" id="ogDesc" content="AzMessage ile güvenli ve hızlı iletişim.">
-    <meta property="og:image" content="https://mehemmed988.github.io/AzMessage/favicon.png">
-
     <style>
         body {
             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
             text-align: center;
-            margin-top: 40px;
+            margin-top: 50px;
             background-color: #f4f4f9;
             color: #333;
             padding: 0 20px;
@@ -31,11 +24,11 @@
         h2 { margin-top: 0; color: #111; }
         p { color: #666; font-size: 15px; line-height: 1.5; }
         
-        /* Arama Kutusu ve Buton Grubu */
+        /* Arama Kutusu Tasarımı */
         .search-box {
             display: flex;
             gap: 8px;
-            margin: 20px 0;
+            margin: 20px 0 10px 0;
         }
         .search-input {
             flex: 1;
@@ -62,14 +55,13 @@
         .search-btn:active { background-color: #1ebe5d; }
 
         .spinner {
-            display: none;
-            width: 32px;
-            height: 32px;
-            border: 3px solid #f3f3f3;
-            border-top: 3px solid #25D366;
+            width: 40px;
+            height: 40px;
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #25D366;
             border-radius: 50%;
             animation: spin 1s linear infinite;
-            margin: 15px auto;
+            margin: 20px auto;
         }
         @keyframes spin {
             0% { transform: rotate(0deg); }
@@ -80,7 +72,7 @@
             display: none;
             width: 100%;
             box-sizing: border-box;
-            margin-top: 12px;
+            margin-top: 15px;
             padding: 14px;
             background-color: #25D366;
             color: white;
@@ -94,81 +86,34 @@
             text-align: center;
         }
         .btn:active { background-color: #1ebe5d; }
-        .btn-secondary { background-color: #0088cc; }
-        .btn-apk { background-color: #43a047; }
+        .btn-secondary { background-color: #0088cc; margin-top: 10px; }
         
-        .error-box { color: #e53935; font-weight: bold; margin-top: 10px; }
-        .success-box { color: #2e7d32; font-weight: bold; margin-top: 10px; }
-        .warning-box { color: #f57c00; font-weight: bold; margin-top: 10px; }
-
-        #qrcode {
-            margin: 20px auto;
-            display: flex;
-            justify-content: center;
-        }
-        #qrcode img {
-            border: 4px solid #fff;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.15);
-            border-radius: 8px;
-        }
+        .error-box { color: #e53935; font-weight: bold; }
+        .success-box { color: #2e7d32; font-weight: bold; }
     </style>
 </head>
 <body>
     <div class="container">
-        <h2 id="appTitle">AzMessage</h2>
-        
-        <!-- Arama Alanı -->
+        <h2>AzMessage</h2>
+
+        <!-- Arama Kutusu ve Butonu -->
         <div class="search-box">
-            <input type="text" id="usernameInput" class="search-input" placeholder="Kullanıcı adı girin (Örn: mami)" />
+            <input type="text" id="usernameInput" class="search-input" placeholder="Kullanıcı adı girin..." />
             <button id="searchBtn" class="search-btn">Ara</button>
         </div>
-
-        <div id="loader" class="spinner"></div>
-        <p id="infoText">Kullanıcı aramak için yukarıdaki kutuyu kullanabilirsiniz.</p>
-
-        <div id="qrcode"></div>
+        
+        <div id="loader" class="spinner" style="display: none;"></div>
+        <p id="infoText">Kullanıcı arayabilir veya doğrudan uygulamayı açabilirsiniz.</p>
 
         <a href="#" id="openAppBtn" class="btn">Uygulamayı Aç</a>
-        <a href="https://github.com/mehemmed988/AzMessage" id="downloadApkBtn" class="btn btn-apk">APK İndir (GitHub)</a>
-        <a href="https://mehemmed988.github.io/AzMessage/" id="fallbackBtn" class="btn btn-secondary">Temizle / Ana Sayfa</a>
+        <a href="https://mehemmed988.github.io/AzMessage/" id="fallbackBtn" class="btn btn-secondary" style="display: none;">Temizle / Ana Sayfa</a>
     </div>
 
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-database-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-auth-compat.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
 
     <script>
-        function isAndroidDevice() {
-            var ua = navigator.userAgent || navigator.vendor || window.opera;
-            if (/android/i.test(ua)) return true;
-            if (navigator.userAgentData && navigator.userAgentData.platform) {
-                return navigator.userAgentData.platform.toLowerCase() === 'android';
-            }
-            return false;
-        }
-
-        function isInAppBrowser() {
-            var ua = navigator.userAgent || navigator.vendor || window.opera;
-            return /FBAN|FBAV|Instagram|Telegram|Twitter|Line|MicroMessenger/i.test(ua);
-        }
-
-        function generateIntentUrl(schemeUrl, fallbackUrl) {
-            var cleanScheme = schemeUrl.replace("azapp://", "");
-            return "intent://" + cleanScheme + "#Intent;scheme=azapp;package=com.azmessage.app;S.browser_fallback_url=" + encodeURIComponent(fallbackUrl) + ";end";
-        }
-
-        var loader = document.getElementById("loader");
-        var infoText = document.getElementById("infoText");
-        var openAppBtn = document.getElementById("openAppBtn");
-        var fallbackBtn = document.getElementById("fallbackBtn");
-        var downloadApkBtn = document.getElementById("downloadApkBtn");
-        var usernameInput = document.getElementById("usernameInput");
-        var searchBtn = document.getElementById("searchBtn");
-
-        var githubReleaseUrl = "https://github.com/mehemmed988/AzMessage";
-        var baseSchemeUrl = "azapp://open";
-
         var firebaseConfig = {
             apiKey: "AIzaSyCyloxmk4_L4_WKeXi6w8gimoFGNfdPz3o",
             authDomain: "azmessage-1998.firebaseapp.com",
@@ -184,34 +129,63 @@
         var db = firebase.database();
         var auth = firebase.auth();
 
-        // Android kontrolü ve QR Kod Mantığı
-        if (!isAndroidDevice()) {
-            infoText.className = "warning-box";
-            infoText.innerText = "Bu hizmet Android cihazlar içindir. Masaüstündeniz aşağıdaki QR kodu taratabilir veya APK dosyasını indirebilirsiniz:";
-            
-            new QRCode(document.getElementById("qrcode"), {
-                text: window.location.href,
-                width: 160,
-                height: 160
-            });
+        var baseSchemeUrl = "azapp://open";
+        var githubReleaseUrl = "https://github.com/mehemmed988/AzMessage";
+        
+        var infoText = document.getElementById("infoText");
+        var openAppBtn = document.getElementById("openAppBtn");
+        var fallbackBtn = document.getElementById("fallbackBtn");
+        var loader = document.getElementById("loader");
+        var usernameInput = document.getElementById("usernameInput");
+        var searchBtn = document.getElementById("searchBtn");
 
-            downloadApkBtn.style.display = "block";
+        // Senin Çalışan Orijinal Manuel Yönlendirme Fonksiyonun
+        function bindManualOpenHandler(schemeUrl) {
+            openAppBtn.onclick = function(e) {
+                e.preventDefault();
+                
+                var appOpened = false;
+                var redirectTimer = null;
+
+                function handleVisibilityChange() {
+                    if (document.hidden) {
+                        appOpened = true;
+                        if (redirectTimer) clearTimeout(redirectTimer);
+                        document.removeEventListener("visibilitychange", handleVisibilityChange);
+                    }
+                }
+
+                document.addEventListener("visibilitychange", handleVisibilityChange);
+
+                // Doğrudan azapp:// scheme tetiklemesi
+                window.location.href = schemeUrl;
+
+                redirectTimer = setTimeout(function() {
+                    document.removeEventListener("visibilitychange", handleVisibilityChange);
+                    if (!appOpened && !document.hidden) {
+                        infoText.innerText = "Uygulama cihazınızda bulunamadı. İndirme sayfasına yönlendiriliyorsunuz...";
+                        setTimeout(function() {
+                            window.location.href = githubReleaseUrl;
+                        }, 1000);
+                    }
+                }, 2500);
+            };
         }
 
-        function searchAndRedirect(targetUsername, autoTrigger) {
+        function processUserSearch(targetUsername, autoTrigger) {
             if (!targetUsername || targetUsername.trim() === "") {
                 infoText.className = "error-box";
-                infoText.innerText = "Lütfen geçerli bir kullanıcı adı girin.";
+                infoText.innerText = "Lütfen bir kullanıcı adı girin!";
                 return;
             }
 
-            targetUsername = targetUsername.trim().replace("@", ""); // Başında @ varsa temizle
-
+            targetUsername = targetUsername.trim().replace("@", "");
+            
+            loader.style.display = "block";
             openAppBtn.style.display = "none";
             fallbackBtn.style.display = "none";
-            loader.style.display = "block";
             infoText.className = "";
-            infoText.innerText = "@" + targetUsername + " aranıyor...";
+            infoText.innerText = "@" + targetUsername + " kontrol ediliyor...";
 
             auth.signInAnonymously()
                 .then(function() {
@@ -231,23 +205,17 @@
 
                     if (found) {
                         var targetSchemeUrl = baseSchemeUrl + "?user=" + encodeURIComponent(targetUsername);
-                        var finalUrl = generateIntentUrl(targetSchemeUrl, githubReleaseUrl);
-
+                        
                         infoText.className = "success-box";
-                        infoText.innerText = "@" + targetUsername + " kullanıcısı bulundu!";
-
-                        openAppBtn.href = finalUrl;
+                        infoText.innerText = "@" + targetUsername + " kullanıcısı bulundu. Uygulama açılıyor...";
+                        
                         openAppBtn.innerText = "@" + targetUsername + " Profilini Aç";
                         openAppBtn.style.display = "block";
-                        downloadApkBtn.style.display = "block";
 
-                        if (isAndroidDevice() && autoTrigger) {
-                            if (isInAppBrowser()) {
-                                infoText.className = "warning-box";
-                                infoText.innerText = "Uygulama içi tarayıcıdasınız. Lütfen sağ üst menüden 'Chrome'da Aç'ı seçin veya butona tıklayın.";
-                            } else {
-                                window.location.href = finalUrl;
-                            }
+                        bindManualOpenHandler(targetSchemeUrl);
+
+                        if (autoTrigger) {
+                            window.location.href = targetSchemeUrl;
                         }
                     } else {
                         infoText.className = "error-box";
@@ -258,39 +226,57 @@
                 .catch(function(err) {
                     loader.style.display = "none";
                     infoText.className = "error-box";
-                    infoText.innerText = "Bir hata oluştu veya bağlantı kurulamadı.";
-                    console.error(err);
+                    infoText.innerText = "Bağlantı hatası oluştu.";
+                    fallbackBtn.style.display = "block";
                 });
         }
 
-        // 1. Manuel Arama Tetikleyicileri
+        // Arama Butonu ve Enter Tuşu Dinleyicileri
         searchBtn.addEventListener("click", function() {
-            searchAndRedirect(usernameInput.value, true);
+            processUserSearch(usernameInput.value, true);
         });
 
         usernameInput.addEventListener("keypress", function(e) {
             if (e.key === "Enter") {
-                searchAndRedirect(usernameInput.value, true);
+                processUserSearch(usernameInput.value, true);
             }
         });
 
-        // 2. URL'den Otomatik Gelen Link Kontrolü (Redirect/User parametresi varsa)
+        // URL Analizi (Sayfa ilk açıldığında linkte user varsa)
         var urlParams = new URLSearchParams(window.location.search);
-        var initialUser = null;
+        var redirectPath = urlParams.get('redirect');
+        var targetUsername = null;
+        var isInvalid = false;
 
         if (urlParams.has('redirect')) {
-            var pathSegments = decodeURIComponent(urlParams.get('redirect')).split("/");
-            var idx = pathSegments.indexOf("user");
-            if (idx !== -1 && pathSegments[idx + 1]) initialUser = pathSegments[idx + 1];
+            if (redirectPath && redirectPath.trim() !== "") {
+                var decodedRedirect = decodeURIComponent(redirectPath);
+                var pathSegments = decodedRedirect.split("/");
+                var userIndex = pathSegments.indexOf("user");
+                if (userIndex !== -1 && pathSegments[userIndex + 1]) {
+                    targetUsername = pathSegments[userIndex + 1];
+                } else { isInvalid = true; }
+            } else { isInvalid = true; }
         } else {
             var pathSegments = window.location.pathname.split("/");
-            var idx = pathSegments.indexOf("user");
-            if (idx !== -1 && pathSegments[idx + 1]) initialUser = pathSegments[idx + 1];
+            var userIndex = pathSegments.indexOf("user");
+            if (userIndex !== -1 && pathSegments[userIndex + 1]) {
+                targetUsername = pathSegments[userIndex + 1];
+            }
         }
 
-        if (initialUser) {
-            usernameInput.value = initialUser;
-            searchAndRedirect(initialUser, true);
+        if (isInvalid) {
+            infoText.className = "error-box";
+            infoText.innerText = "Geçersiz veya hatalı bağlantı adresi!";
+            fallbackBtn.style.display = "block";
+        } else if (targetUsername) {
+            usernameInput.value = targetUsername;
+            processUserSearch(targetUsername, true);
+        } else {
+            // Sadece ana sayfaya girildiyse
+            openAppBtn.innerText = "Uygulamayı Aç";
+            openAppBtn.style.display = "block";
+            bindManualOpenHandler(baseSchemeUrl);
         }
     </script>
 </body>
