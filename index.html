@@ -412,6 +412,12 @@
 
                 targetUsername = targetUsername.trim().replace("@", "");
                 
+                // Kullanıcı arama yaptığında tarayıcı URL'sini sayfa yenilenmeden /user/kullanıcı_adı olarak güncelle
+                if (window.history && window.history.pushState) {
+                    var newUrl = window.location.origin + window.location.pathname.replace(/\/user\/.*$/, '') + "/user/" + encodeURIComponent(targetUsername);
+                    window.history.pushState({ path: newUrl }, '', newUrl);
+                }
+
                 loader.style.display = "block";
                 openAppBtn.style.display = "none";
                 fallbackBtn.style.display = "none";
