@@ -25,7 +25,6 @@
             overflow-x: hidden;
         }
 
-        /* Arka Plan Süsleme Efektleri */
         .bg-glow-1 {
             position: absolute;
             top: -100px;
@@ -67,7 +66,6 @@
             text-align: center;
         }
 
-        /* Logo Simgesi */
         .app-icon {
             width: 72px;
             height: 72px;
@@ -101,7 +99,6 @@
             margin-bottom: 24px;
         }
 
-        /* Arama Kutusu */
         .search-box {
             display: flex;
             gap: 8px;
@@ -148,7 +145,6 @@
             background-color: #1ebe5d;
         }
 
-        /* Spinner */
         .spinner {
             width: 32px;
             height: 32px;
@@ -164,7 +160,6 @@
             100% { transform: rotate(360deg); }
         }
 
-        /* Butonlar */
         .btn {
             display: none;
             width: 100%;
@@ -199,7 +194,35 @@
             background-color: rgba(255, 255, 255, 0.15);
         }
 
-        /* Durum Mesajları */
+        .btn-blog {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            width: 100%;
+            padding: 14px;
+            margin-top: 12px;
+            background: linear-gradient(135deg, rgba(14, 165, 233, 0.15), rgba(99, 102, 241, 0.15));
+            color: #38bdf8;
+            border: 1px solid rgba(56, 189, 248, 0.3);
+            border-radius: 12px;
+            font-size: 14.5px;
+            font-weight: 700;
+            text-decoration: none;
+            transition: all 0.2s ease;
+        }
+
+        .btn-blog:active {
+            transform: scale(0.98);
+            background: linear-gradient(135deg, rgba(14, 165, 233, 0.25), rgba(99, 102, 241, 0.25));
+        }
+
+        .btn-blog svg {
+            width: 20px;
+            height: 20px;
+            fill: #38bdf8;
+        }
+
         .status-box {
             font-size: 13.5px;
             font-weight: 600;
@@ -212,7 +235,6 @@
         .success-box { color: #4ade80; background-color: rgba(34, 197, 94, 0.1); border: 1px solid rgba(34, 197, 94, 0.2); }
         .warning-box { color: #fbbf24; background-color: rgba(245, 158, 11, 0.1); border: 1px solid rgba(245, 158, 11, 0.2); }
 
-        /* Özellik Rozetleri (Boşluğu Doldurmak İçin) */
         .features {
             display: flex;
             justify-content: center;
@@ -236,7 +258,6 @@
             fill: #25D366;
         }
 
-        /* Footer */
         footer {
             z-index: 1;
             margin-top: 20px;
@@ -264,7 +285,6 @@
 
     <div class="main-wrapper">
         <div class="card">
-            <!-- App Logo İkonu -->
             <div class="app-icon">
                 <svg viewBox="0 0 24 24">
                     <path d="M20 2H4c-1.1 0-1.99.9-1.99 2L2 22l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zM6 9h12v2H6V9zm8 5H6v-2h8v2zm4-6H6V6h12v2z"/>
@@ -284,7 +304,13 @@
             <a href="#" id="openAppBtn" class="btn">Uygulamayı Aç</a>
             <a href="https://mehemmed988.github.io/AzMessageWeb/" id="fallbackBtn" class="btn btn-secondary">Web Sitesine Git</a>
 
-            <!-- Özellik Rozetleri -->
+            <a href="https://azmessage.blogspot.com/?m=1" target="_blank" rel="noopener noreferrer" class="btn-blog">
+                <svg viewBox="0 0 24 24">
+                    <path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-5 14H7v-2h7v2zm3-4H7v-2h10v2zm0-4H7V7h10v2z"/>
+                </svg>
+                Blog & Güncelleme Notları
+            </a>
+
             <div class="features">
                 <div class="feature-item">
                     <svg viewBox="0 0 24 24"><path d="M12 1L3 5v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V5l-9-4zm-2 16l-4-4 1.41-1.41L10 14.17l6.59-6.59L18 9l-8 8z"/></svg>
@@ -353,7 +379,7 @@
         }
 
         if (!isAndroidMobileOrTablet()) {
-            setStatus("Bu uygulama ve yönlendirme yalnızca Android telefon me tabletlerde çalışmaktadır.", "status-box warning-box");
+            setStatus("Bu uygulama ve yönlendirme yalnızca Android telefon ve tabletlerde çalışmaktadır.", "status-box warning-box");
             fallbackBtn.style.display = "block";
         } else {
             searchContainer.style.display = "flex";
@@ -412,8 +438,6 @@
 
                 targetUsername = targetUsername.trim().replace("@", "");
                 
-                // Kullanıcı ister arama kutusuna yazıp aratsın ister doğrudan tıkılasın:
-                // Adres çubuğunu temizleyip dinamik olarak /user/kullanıcı_adı olarak güncelle
                 if (window.history && window.history.pushState) {
                     var basePath = window.location.pathname.split("/user/")[0];
                     if (basePath.endsWith('/')) {
