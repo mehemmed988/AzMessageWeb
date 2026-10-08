@@ -353,7 +353,7 @@
         }
 
         if (!isAndroidMobileOrTablet()) {
-            setStatus("Bu uygulama ve yönlendirme yalnızca Android telefon ve tabletlerde çalışmaktadır.", "status-box warning-box");
+            setStatus("Bu uygulama ve yönlendirme yalnızca Android telefon me tabletlerde çalışmaktadır.", "status-box warning-box");
             fallbackBtn.style.display = "block";
         } else {
             searchContainer.style.display = "flex";
@@ -412,9 +412,14 @@
 
                 targetUsername = targetUsername.trim().replace("@", "");
                 
-                // Kullanıcı arama yaptığında tarayıcı URL'sini sayfa yenilenmeden /user/kullanıcı_adı olarak güncelle
+                // Kullanıcı ister arama kutusuna yazıp aratsın ister doğrudan tıkılasın:
+                // Adres çubuğunu temizleyip dinamik olarak /user/kullanıcı_adı olarak güncelle
                 if (window.history && window.history.pushState) {
-                    var newUrl = window.location.origin + window.location.pathname.replace(/\/user\/.*$/, '') + "/user/" + encodeURIComponent(targetUsername);
+                    var basePath = window.location.pathname.split("/user/")[0];
+                    if (basePath.endsWith('/')) {
+                        basePath = basePath.slice(0, -1);
+                    }
+                    var newUrl = window.location.origin + basePath + "/user/" + encodeURIComponent(targetUsername);
                     window.history.pushState({ path: newUrl }, '', newUrl);
                 }
 
